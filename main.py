@@ -30,6 +30,9 @@ composingMessages = {}
 # словарь количества ошибок
 errorMessages = {}
 
+# словарь может ли человек писать
+canWriteMessages = {}
+
 # текущий номер преступника
 iterCriminals = 1
 # список преступников
@@ -105,6 +108,7 @@ def add_id(check_id):
     else:
         bot.send_message(check_id, 'Привет, я бот для отслеживания преступников. Если кого-то увидишь, пиши!', reply_markup=keyboard_terror)
         usersId.append(check_id)
+        canWriteMessages[check_id] = 1
 
 
 # удаления пользователя из списка пользователей
@@ -117,34 +121,23 @@ def del_id(check_id):
 
 
 # отправляет сообщение всем пользователям
-def send_text_to_all(message):
+def send_text_to_all(message, chat_id):
     global iterCriminals
+    canWriteMessages[chat_id] = 0
+
     for id in usersId:
         nameImage = 'photo' + str(iterCriminals) + '.jpg'
         img = open(nameImage, 'rb')
         bot.send_photo(id, img)
         bot.send_message(id, message)
         bot.send_message(id, criminals[iterCriminals])
+
     if iterCriminals == 4:
         iterCriminals = 1
     else:
         iterCriminals += 1
 
-
-# отправляет сообщение всем пользователям кроме одного
-def send_text_to_all_but(message, check_id):
-    global iterCriminals
-    for id in usersId:
-        if id != check_id:
-            nameImage = 'photo' + str(iterCriminals) + '.jpg'
-            img = open(nameImage, 'rb')
-            bot.send_photo(id, img)
-            bot.send_message(id, message)
-            bot.send_message(id, criminals[iterCriminals])
-    if iterCriminals == 4:
-        iterCriminals = 1
-    else:
-        iterCriminals += 1
+    canWriteMessages[chat_id] = 1
 
 
 
@@ -186,85 +179,82 @@ def stop_message(message):
 # ответ на текст
 @bot.message_handler(content_types=['text'])
 def send_text_who(message):
-    print(composingMessages)
-    flagUnderstend = 0
 
-    delList = []
+    if canWriteMessages[message.chat.id] == 1:
+        flagUnderstend = 0
 
-    flag_del = 0
+        flag_del = 0
 
-    for chat_id in composingMessages:
-        if message.chat.id == chat_id:
-            for addressesNum in range(len(addresses) - 1):
-                if composingMessages[message.chat.id] == 'Внимание! Замечен преступник по адресу ' + str(addresses[addressesNum]):
-                    len_cameras_location = len(cameras_location[addressesNum])
-                    for cameras_num in range(len_cameras_location):
-                        if message.text == cameras_location[addressesNum][len(cameras_location[addressesNum]) - 2]:
-                            bot.send_message(message.chat.id, 'Мы проверим информацию, спасибо!', reply_markup=keyboard_terror)
-                            composingMessages[message.chat.id] = composingMessages[message.chat.id] + ', камера не указана'
-                            send_text_to_all(composingMessages[message.chat.id])
-                            flagUnderstend = 1
-                            flag_del = 1
-                            break
-                        elif message.text == cameras_location[addressesNum][len(cameras_location[addressesNum]) - 1]:
-                            bot.send_message(message.chat.id, 'Возвращаю в главное меню', reply_markup=keyboard_terror)
-                            flagUnderstend = 1
-                            flag_del = 1
-                            break
-                        elif message.text == cameras_location[addressesNum][cameras_num]:
-                            bot.send_message(message.chat.id, 'Мы проверим информацию, спасибо!', reply_markup=keyboard_terror)
-                            composingMessages[message.chat.id] = composingMessages[message.chat.id] + ', камера ' + cameras_location[addressesNum][cameras_num]
-                            send_text_to_all(composingMessages[message.chat.id])
-                            flagUnderstend = 1
-                            flag_del = 1
-                            break
-        if flag_del == 1:
-            del composingMessages[message.chat.id]
-        break
+        for chat_id in composingMessages:
+            if message.chat.id == chat_id:
+                # 3 меню
+                for addressesNum in range(len(addresses) - 1):
+                    if composingMessages[message.chat.id] == 'Внимание! Замечен преступник по адресу ' + str(addresses[addressesNum]):
+                        len_cameras_location = len(cameras_location[addressesNum])
+                        for cameras_num in range(len_cameras_location):
+                            if message.text == cameras_location[addressesNum][len(cameras_location[addressesNum]) - 2]:
+                                bot.send_message(message.chat.id, 'Мы проверим информацию, спасибо!', reply_markup=keyboard_terror)
+                                composingMessages[message.chat.id] = composingMessages[message.chat.id] + ', камера не указана'
+                                send_text_to_all(composingMessages[message.chat.id], message.chat.id)
+                                flagUnderstend = 1
+                                flag_del = 1
+                                break
+                            elif message.text == cameras_location[addressesNum][len(cameras_location[addressesNum]) - 1]:
+                                bot.send_message(message.chat.id, 'Возвращаю в главное меню', reply_markup=keyboard_terror)
+                                flagUnderstend = 1
+                                flag_del = 1
+                                break
+                            elif message.text == cameras_location[addressesNum][cameras_num]:
+                                bot.send_message(message.chat.id, 'Мы проверим информацию, спасибо!', reply_markup=keyboard_terror)
+                                composingMessages[message.chat.id] = composingMessages[message.chat.id] + ', камера ' + cameras_location[addressesNum][cameras_num]
+                                send_text_to_all(composingMessages[message.chat.id], message.chat.id)
+                                flagUnderstend = 1
+                                flag_del = 1
+                                break
 
-    flag_del = 0
+                # 2 меню
+                for mesNum in range(len(addresses)):
+                    if message.text == addresses[len(addresses) - 1]:
+                        bot.send_message(message.chat.id, 'Возвращаю в главное меню', reply_markup=keyboard_terror)
+                        flag_del = 1
+                        flagUnderstend = 1
+                        break
+                    elif message.text == addresses[mesNum]:
+                        bot.send_message(message.chat.id, 'У какого входа ты его видел?', reply_markup=keyboard_cameras_location_mas[mesNum])
+                        composingMessages[message.chat.id] = composingMessages[message.chat.id] + addresses[mesNum]
+                        flagUnderstend = 1
+                        break
 
-    for chat_id in composingMessages:
-        if message.chat.id == chat_id:
-            for mesNum in range(len(addresses)):
-                if message.text == addresses[len(addresses) - 1]:
-                    bot.send_message(message.chat.id, 'Возвращаю в главное меню', reply_markup=keyboard_terror)
-                    flag_del = 1
-                    flagUnderstend = 1
-                    break
-                elif message.text == addresses[mesNum]:
-                    bot.send_message(message.chat.id, 'У какого входа ты его видел?', reply_markup=keyboard_cameras_location_mas[mesNum])
-                    composingMessages[message.chat.id] = composingMessages[message.chat.id] + addresses[mesNum]
-                    flagUnderstend = 1
-                    break
+            if flag_del == 1:
+                del composingMessages[message.chat.id]
+            break
 
-        if flag_del == 1:
-            del composingMessages[message.chat.id]
-        break
+        # 1 меню
+        if message.text == 'Преступник!!!':
+            flagUnderstend = 1
+            bot.send_message(message.chat.id, 'Где ты его видел?', reply_markup=keyboard_cameras_location)
+            composingMessages[message.chat.id] = 'Внимание! Замечен преступник по адресу '
+        elif message.text == 'Простой человек':
+            flagUnderstend = 1
+            bot.send_message(message.chat.id, 'Не волнуйся, все в порядке')
 
+        if flagUnderstend == 0:
+            if check_in_errorMessages(message.chat.id) == 0:
+                errorMessages[message.chat.id] = 1
+            else:
+                errorMessages[message.chat.id] += 1
 
-    if message.text == 'Преступник!!!':
-        flagUnderstend = 1
-        bot.send_message(message.chat.id, 'Где ты его видел?', reply_markup=keyboard_cameras_location)
-        composingMessages[message.chat.id] = 'Внимание! Замечен преступник по адресу '
-    elif message.text == 'Простой человек':
-        flagUnderstend = 1
-        bot.send_message(message.chat.id, 'Не волнуйся, все в порядке')
-
-
-    if flagUnderstend == 0:
-        if check_in_errorMessages(message.chat.id) == 0:
-            errorMessages[message.chat.id] = 1
+            if errorMessages[message.chat.id] >= 3:
+                bot.send_message(message.chat.id, 'Кажется что-то пошло не так, попробуй заново, возвращаю в главное меню', reply_markup=keyboard_terror)
+                del_errorMessages(message.chat.id)
+            else:
+                bot.send_message(message.chat.id, 'Я тебя не понимаю, попробуй воспользоваться меню')
         else:
-            errorMessages[message.chat.id] += 1
-
-        if errorMessages[message.chat.id] >= 3:
-            bot.send_message(message.chat.id, 'Кажется что-то пошло не так, попробуй заново, возвращаю в главное меню', reply_markup=keyboard_terror)
             del_errorMessages(message.chat.id)
-        else:
-            bot.send_message(message.chat.id, 'Я тебя не понимаю, попробуй воспользоваться меню')
     else:
-        del_errorMessages(message.chat.id)
+        bot.send_message(message.chat.id, 'Подожди, я обрабатываю Твой предыдущий запрос')
+
+
 
 
 # interval - показывает раз во сколько секунд бот будет проверять пришли ли ему сообщения (?)
