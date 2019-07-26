@@ -1,10 +1,11 @@
 import telebot
+from bot_token import *
 
 # имя бота
 # @testcrtgrombot
 
 # bot - переменная, с помощью которой можно обращаться к боту
-bot = telebot.TeleBot('928505119:AAEvgM9FJnuItQ7gxNwYryLYjmyB2O15-ng')
+bot = telebot.TeleBot(bot_token)
 
 # список пользователей
 usersId = []
